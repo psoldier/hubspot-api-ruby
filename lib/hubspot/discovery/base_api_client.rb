@@ -130,7 +130,7 @@ module Hubspot
       
       def define_api_methods
         api_methods.each do |api_method|
-          self.class.define_method(api_method) do |params = {}, &block|
+          self.class.send(:define_method, api_method) do |params = {}, &block|
             params_with_defaults = params
             params_with_defaults[:opts] ||= {}
             params_with_defaults[:opts][:auth_names] = if base_params[:access_token]
@@ -151,15 +151,17 @@ module Hubspot
             end
 
             params_to_pass = signature_params.map do |req, param|
-              if params_with_defaults[param].nil?
-                model_name = Hubspot::Helpers::CamelCase.new.format(param.to_s)
-                require_codegen "#{codegen_module_path}/models/#{param.to_s}"
-                Kernel.const_get("#{codegen_module_name}::#{model_name}").build_from_hash(params_with_defaults[:body])
-              else
-                params_with_defaults[param]
+              begin
+                if params_with_defaults[param].nil?
+                  model_name = Hubspot::Helpers::CamelCase.new.format(param.to_s)
+                  require_codegen "#{codegen_module_path}/models/#{param.to_s}"
+                  Kernel.const_get("#{codegen_module_name}::#{model_name}").build_from_hash(params_with_defaults[:body])
+                else
+                  params_with_defaults[param]
+                end
+              rescue NameError
+                raise "Param #{param} is required for #{api.class}\##{api_method} method" if req == :req
               end
-            rescue NameError
-              raise "Param #{param} is required for #{api.class}\##{api_method} method" if req == :req
             end
 
             return call_api_with_retry(api_method, params_to_pass, params[:retry], &block) unless params[:retry].nil?

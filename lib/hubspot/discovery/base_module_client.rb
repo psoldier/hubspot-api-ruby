@@ -32,7 +32,7 @@ module Hubspot
   
       def define_modules_methods
         api_modules.each do |api_module|
-          self.class.define_method(api_module) do
+          self.class.send(:define_method, api_module) do
             require_with_mapping "#{discovery_module_path}/#{__method__.to_s}/client"
             class_name = "#{base_module}::#{Hubspot::Helpers::CamelCase.new.format(__method__.to_s)}::Client"
             Kernel.const_get(class_name).new(params)
@@ -42,7 +42,7 @@ module Hubspot
         
       def define_classes_methods
         api_classes.each do |api_class|
-          self.class.define_method("#{api_class}_api") do
+          self.class.send(:define_method, "#{api_class}_api") do
             require_with_mapping "#{discovery_module_path}/api/#{__method__.to_s}"
             class_name = "#{base_module}::#{Hubspot::Helpers::CamelCase.new.format(__method__.to_s)}"
             Kernel.const_get(class_name).new(params)
